@@ -6,18 +6,71 @@ The recipient will then sign the payload with the shared key again. And if the h
 package main
 
 import (
+	"flag"
 	"fmt"
+	"strings"
 
 	"github.com/alexellis/hmac"
 )
 
 func main() {
-	input := []byte(`input message from API`)
-	secret := []byte(`so secret`)
+	var inputVar string
+	var secretVar string
+	var modeVar string
+	var digestVar string
 
-	digest := hmac.Sign(input, secret)
+	// go run main.go -message="my message" -secret="omo kabba"
+	flag.StringVar(&inputVar, "message", "", "message to create a digest from")
+	flag.StringVar(&secretVar, "secret", "", "secret for the digest")
+	flag.StringVar(&modeVar, "mode", "generate", "mode for hmac operations")
+	flag.StringVar(&digestVar, "digest", "", "digest for validation")
 
-	fmt.Printf("Digest: %x\n", digest)
+	flag.Parse()
+
+	if len(strings.TrimSpace(secretVar)) == 0 {
+		panic("--secret is required")
+	}
+
+	if modeVar == "generate" {
+		fmt.Printf("Computing hash for: %q\nSecret: %q\n", inputVar, secretVar)
+		digest := hmac.Sign([]byte(inputVar), []byte(secretVar))
+		fmt.Printf("Digest: %x\n", digest)
+		return
+	} else if modeVar == "validate" {
+
+		if len(strings.TrimSpace(digestVar)) == 0 {
+			panic("--digest is required")
+		}
+
+		composeDigest := hmac.Sign([]byte(inputVar), []byte(secretVar))
+
+		err := hmac.Validate([]byte(inputVar), fmt.Sprintf("sha1=%x", composeDigest), string(secretVar))
+
+		if err != nil {
+			panic(err)
+		}
+
+		fmt.Printf("Digest validated.\n")
+
+		return
+
+	}
+
+	fmt.Printf("Unknown mode entered.\n")
+
+	// fmt.Printf("Computing hash for: %q\nSecret: %q\n", inputVar, secretVar)
+
+	// input := []byte(`input message from API`)
+	// secret := []byte(`so secret`)
+
+	// verify the digest
+
+	// err := hmac.Validate(input, fmt.Sprintf("sha1=%x", digest), string(secret))
+
+	// if err != nil {
+	// 	panic(err)
+	// }
+
 }
 
 /*
